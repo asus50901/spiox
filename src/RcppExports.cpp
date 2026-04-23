@@ -334,8 +334,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // spiox_latent_vi
-Rcpp::List spiox_latent_vi(const arma::mat& Y, const arma::mat& X, const arma::mat& coords, const arma::field<arma::uvec>& custom_dag, int dag_opts, const arma::mat& Theta, const arma::mat& Sigma_start, const arma::mat& Beta_start, const arma::mat& W_start, const arma::vec& Ddiag_start, int matern, int num_threads, int print_every, double tol, int max_iter);
-RcppExport SEXP _spiox_spiox_latent_vi(SEXP YSEXP, SEXP XSEXP, SEXP coordsSEXP, SEXP custom_dagSEXP, SEXP dag_optsSEXP, SEXP ThetaSEXP, SEXP Sigma_startSEXP, SEXP Beta_startSEXP, SEXP W_startSEXP, SEXP Ddiag_startSEXP, SEXP maternSEXP, SEXP num_threadsSEXP, SEXP print_everySEXP, SEXP tolSEXP, SEXP max_iterSEXP) {
+Rcpp::List spiox_latent_vi(const arma::mat& Y, const arma::mat& X, const arma::mat& coords, const arma::field<arma::uvec>& custom_dag, int dag_opts, const arma::mat& Theta, const arma::mat& Sigma_start, const arma::mat& Beta_start, const arma::mat& W_start, const arma::vec& Ddiag_start, int matern, int num_threads, int print_every, double tol, int max_iter, int vi_pred_smp);
+RcppExport SEXP _spiox_spiox_latent_vi(SEXP YSEXP, SEXP XSEXP, SEXP coordsSEXP, SEXP custom_dagSEXP, SEXP dag_optsSEXP, SEXP ThetaSEXP, SEXP Sigma_startSEXP, SEXP Beta_startSEXP, SEXP W_startSEXP, SEXP Ddiag_startSEXP, SEXP maternSEXP, SEXP num_threadsSEXP, SEXP print_everySEXP, SEXP tolSEXP, SEXP max_iterSEXP, SEXP vi_pred_smpSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -354,7 +354,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< int >::type print_every(print_everySEXP);
     Rcpp::traits::input_parameter< double >::type tol(tolSEXP);
     Rcpp::traits::input_parameter< int >::type max_iter(max_iterSEXP);
-    rcpp_result_gen = Rcpp::wrap(spiox_latent_vi(Y, X, coords, custom_dag, dag_opts, Theta, Sigma_start, Beta_start, W_start, Ddiag_start, matern, num_threads, print_every, tol, max_iter));
+    Rcpp::traits::input_parameter< int >::type vi_pred_smp(vi_pred_smpSEXP);
+    rcpp_result_gen = Rcpp::wrap(spiox_latent_vi(Y, X, coords, custom_dag, dag_opts, Theta, Sigma_start, Beta_start, W_start, Ddiag_start, matern, num_threads, print_every, tol, max_iter, vi_pred_smp));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -444,7 +445,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_spiox_spiox_response", (DL_FUNC) &_spiox_spiox_response, 15},
     {"_spiox_spiox_latent", (DL_FUNC) &_spiox_spiox_latent, 19},
     {"_spiox_spiox_response_vi", (DL_FUNC) &_spiox_spiox_response_vi, 11},
-    {"_spiox_spiox_latent_vi", (DL_FUNC) &_spiox_spiox_latent_vi, 15},
+    {"_spiox_spiox_latent_vi", (DL_FUNC) &_spiox_spiox_latent_vi, 16},
     {"_spiox_spiox_predict", (DL_FUNC) &_spiox_spiox_predict, 11},
     {"_spiox_spiox_predict_part", (DL_FUNC) &_spiox_spiox_predict_part, 12},
     {"_spiox_spiox_latent_predict", (DL_FUNC) &_spiox_spiox_latent_predict, 11},

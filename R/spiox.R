@@ -132,9 +132,11 @@ spiox <- function(Y, X, coords, m = 15,
     num_threads  = RhpcBLASctl::get_num_cores(),
     tol          = 1e-2,
     matern       = 1,
-    nu           = 0.5
+    nu           = 0.5,
+    vi_pred_smp  = 0
   )
   opts <- modifyList(opts_defaults, if (is.null(opts)) list() else opts)
+  opts$vi_pred_smp <- as.integer(opts$vi_pred_smp)
   stopifnot("opts$update_Theta must be length 3" = length(opts$update_Theta) == 3L)
   
   # Thread management
@@ -297,7 +299,8 @@ spiox <- function(Y, X, coords, m = 15,
       num_threads  = as.integer(opts$num_threads),
       print_every  = print_every, 
       tol          = opts$tol, 
-      max_iter     = iter
+      max_iter     = iter,
+      vi_pred_smp = opts$vi_pred_smp
     ),
     
     stop("Unknown method/fit combination.")

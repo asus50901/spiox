@@ -423,7 +423,8 @@ Rcpp::List spiox_latent_vi(const arma::mat& Y,
                            int num_threads = 1,
                            int print_every = 0,
                            double tol = 1e-2,
-                           int max_iter = 500){
+                           int max_iter = 500,
+                           int vi_pred_smp = 0){
   
   // do min_iter iterations at least
   int nq = Y.n_cols * Y.n_rows;
@@ -482,12 +483,39 @@ Rcpp::List spiox_latent_vi(const arma::mat& Y,
   arma::vec rel_D_store(max_iter, arma::fill::zeros);
   arma::vec rel_ll_store(max_iter, arma::fill::zeros);
   
+  // for misalignment prediction
+  int n_miss = 0;
+  if(iox_model.Y_needs_filling){
+    n_miss = iox_model.Y_na_indices.n_elem;
+  }
+  
+  arma::cube Beta_post_samples;
+  arma::cube W_post_samples;
+  arma::mat Ddiag_post_samples;
+  arma::mat Y_missing_samples;
+  
+  if(vi_pred_smp < 0){
+    Rcpp::stop("vi_pred_smp must be >= 0.");
+  } 
+  
+  if(vi_pred_smp > 0){
+    Beta_post_samples = arma::zeros(p, q, vi_pred_smp);
+    W_post_samples = arma::zeros(n, q, vi_pred_smp);
+    Ddiag_post_samples = arma::zeros(q, vi_pred_smp);
+    Y_missing_samples = arma::zeros(n_miss, vi_pred_smp);
+  } 
+  
   if(print_every > 0){
     Rcpp::Rcout << "Starting VI." << endl;
   }
   
   bool stop=false; // stopping flag
   int about_to_exit = 0; // counter for how long we've been "good"
+  
+  // additional flags for collecting misalignment pred smp
+  bool converged = false;
+  bool collecting = false;
+  int collect_counter = 0;
   
   int i=0;
   while(!stop){
@@ -520,19 +548,20 @@ Rcpp::List spiox_latent_vi(const arma::mat& Y,
     double max_rel_change = rel_change.max();
     
     bool print_condition = (print_every>0);
-    if(print_condition){
-      print_condition = print_condition & (!(i % print_every));
-    };
-    if(print_condition){
-      Rcpp::Rcout << "Iteration: " <<  i << endl;
+    if(print_every > 0 && !collecting){
+      if(i % print_every == 0){
+        Rcpp::Rcout << "Iteration: " << i << endl;
+      }
     }
     
-    // storing for trace plots
-    rel_B_store(i - 1) = rel_change(0);
-    rel_Sigma_store(i - 1) = rel_change(1);
-    rel_W_store(i - 1) = rel_change(2);
-    rel_D_store(i - 1) = rel_change(3);
-    rel_ll_store(i - 1) = rel_change(4);
+    // storing for optimizing trace plots
+    if(!collecting && i <= max_iter){
+      rel_B_store(i - 1) = rel_change(0);
+      rel_Sigma_store(i - 1) = rel_change(1);
+      rel_W_store(i - 1) = rel_change(2);
+      rel_D_store(i - 1) = rel_change(3);
+      rel_ll_store(i - 1) = rel_change(4);
+    }
     
     if(i > min_iter){
       if(max_rel_change < tol){
@@ -550,19 +579,84 @@ Rcpp::List spiox_latent_vi(const arma::mat& Y,
     }
     
     // stopping?
-    stop = about_to_exit > wait_time_before_stop;
-    if (i >= max_iter) stop = true;
-  }
+    //stop = about_to_exit > wait_time_before_stop;
+    //if (i >= max_iter) stop = true;
+    bool stop_trigger = about_to_exit > wait_time_before_stop;
+    if(!collecting && stop_trigger){
+      converged = true;
+      
+      if(vi_pred_smp == 0){
+        stop = true;
+      } else{
+        collecting = true; 
+        collect_counter = 0;
+        if(print_every > 0){
+          Rcpp::Rcout << "Starting VI missing sample collection" << endl;
+        }
+      }
+    } 
+    
+    // max_iter is only for the optimization, not for pred samples
+    if(!collecting && i >= max_iter){
+      stop = true;
+    } 
+    
+    if(collecting){
+      if(collect_counter < vi_pred_smp){
+        
+        // smp for misalign pred
+        arma::mat Beta_draw = iox_model.B;
+        arma::mat W_draw = iox_model.W;
+        
+        // Draw Ddiag from the inverse Wishart
+        arma::vec Ddiag_draw(q);
+        for(unsigned int j = 0; j < q; j++){
+          double shape = (iox_model.avail_by_outcome(j).n_elem - 1.0) / 2.0 + 2.0;
+          double rate  = 1.0 + 0.5 * iox_model.Ddiag_UQ(j);
+          Ddiag_draw(j) = 1.0 / R::rgamma(shape, 1.0 / rate);
+        } 
+        
+        // storing 
+        Beta_post_samples.slice(collect_counter) = Beta_draw;
+        W_post_samples.slice(collect_counter) = W_draw;
+        Ddiag_post_samples.col(collect_counter) = Ddiag_draw;
+        
+        // Generate the Noise term
+        arma::mat noise = arma::randn(n, q);
+        noise.each_row() %= arma::sqrt(Ddiag_draw).t();
+        
+        arma::mat Yhat = X * Beta_draw + W_draw + noise;
+        
+        if(n_miss > 0){
+          Y_missing_samples.col(collect_counter) = Yhat(iox_model.Y_na_indices);
+        } 
+        
+        collect_counter++;
+        if(print_every > 0){
+          if(collect_counter % print_every == 0){
+            Rcpp::Rcout << "VI missing sample: " << collect_counter
+                        << " of " << vi_pred_smp << endl;
+          }
+        } 
+      }
+      
+      if(collect_counter >= vi_pred_smp){
+        stop = true;
+      } 
+    }
+    
+  } 
   
   //arma::vec vecBeta_UQ = iox_model.Beta_UQ.diag() / (i-1.0);
   //arma::mat Beta_UQ = arma::mat(vecBeta_UQ.memptr(), p, q);
   
   // cut off the unused(NA) elements
-  rel_B_store = rel_B_store.head(i);
-  rel_Sigma_store = rel_Sigma_store.head(i);
-  rel_W_store = rel_W_store.head(i);
-  rel_D_store = rel_D_store.head(i);
-  rel_ll_store = rel_ll_store.head(i);
+  int n_trace = std::min(i - collect_counter, max_iter);
+  rel_B_store = rel_B_store.head(n_trace);
+  rel_Sigma_store = rel_Sigma_store.head(n_trace);
+  rel_W_store = rel_W_store.head(n_trace);
+  rel_D_store = rel_D_store.head(n_trace);
+  rel_ll_store = rel_ll_store.head(n_trace);
   
   arma::mat Beta_UQ = iox_model.Beta_UQ/(i-1.0-min_iter);
   
@@ -581,7 +675,9 @@ Rcpp::List spiox_latent_vi(const arma::mat& Y,
       Rcpp::Named("rel_Ddiag") = rel_D_store,
       Rcpp::Named("rel_ll") = rel_ll_store
     ),
-    Rcpp::Named("n_iter") = i,
+    Rcpp::Named("n_iter") = converged ?(i - collect_counter):i,
+    Rcpp::Named("Y_missing_samples") = Y_missing_samples,
+    Rcpp::Named("Y_missing_indices") = iox_model.Y_na_indices + 1,
     Rcpp::Named("markov_blanket") = iox_model.daggps[0].mblanket
   );
   
