@@ -221,6 +221,10 @@ public:
   std::vector<arma::vec> postcov_u;            // per-thread scratch, length q (forward parent gather)
   void postcov_setup();                        // one-time levels + children + storage
   void build_postcov_factors();
+  
+  //Generalized version - prior_Q is the Sigma prior inverse
+  void build_postcov_factors_general(const arma::mat& omega, const arma::mat& prior_Q);
+  
   // Apply the postcov W-half PC to one W-block: z = U^{-1}U^{-ᵀ} r, r_w / z_w
   // length nq (outcome-major).  Level-scheduled parallel block substitution.
   void postcov_apply(const double* r_w, double* z_w);
@@ -235,6 +239,11 @@ public:
   // dscale VADU when Q is diagonal.  bw_vadu_Minv[i] = M_i^{-1}, built per sweep.
   std::vector<arma::mat> bw_vadu_Minv;            // size n, each q×q (= M_i^{-1})
   void build_vadu_Minv();                          // per-location M_i^{-1} (parallel over n)
+  
+  // Generalized version for non-Gaussian dist.
+  // omega is n x q and prior_Q is q x q.
+  void build_vadu_Minv_general(const arma::mat& omega, const arma::mat& prior_Q);
+  
   void vadu_mv_apply(const double* r_w, double* z_w);  // H^{-1} M^{-1} H^{-ᵀ}, length nq
 
   // Telemetry: number of CG iterations used in the most-recent W-block update,
@@ -273,7 +282,20 @@ public:
   // its own inline Jacobi PC — doesn't touch the PrecondChoice enum.
   void update_BW_asis(int& cg_iter, arma::mat& B, arma::mat& W, bool sampling);
 
+  // Generalized joint Gaussian update for a quadratic likelihood:
+  //
+  //   -0.5 * vec(XB + W)' diag(vec(omega)) vec(XB + W) + vec(Gscore)' vec(XB + W)
+  // Meaning for Gaussian, Binomial, NegBin
+  // prior_Q_sqrt is the lower Chol of prior_Q 
+  // omega and Gscore are passed explicitly and are not stored in SpIOX.
+  void general_BW_block(const arma::mat& omega, const arma::mat& Gscore,
+                        const arma::mat& prior_Q, const arma::mat& prior_Q_sqrt,
+                        int& cg_iter, PrecondChoice precond, bool sampling = true,
+                        int cg_maxit_override = 0,
+                        bool force_rebuild = false);
+  
   // Joint BW PCG sampler — the only block sampler that survives the cleanup.
+  // This PCG sampler is limited to Gaussian though.
   // PC dispatched on `precond`: PRECOND_JACOBI (diagonal of the joint precision),
   // PRECOND_VADU, or PRECOND_POSTCOV (each defines a W-half apply that the shared
   // symmetric block Gauss-Seidel wrapper combines with the exact p×p B-solve).
@@ -434,7 +456,7 @@ public:
     
     // intercept? 
     intercept = -1;
-    for(int j=0; j<q; j++){
+    for(int j=0; j<p; j++){
       if(arma::all(X.col(j) == 1.0)){
         intercept = j;
         break;
