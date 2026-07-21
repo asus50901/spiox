@@ -8,6 +8,8 @@
 using namespace std;
 
 // This file (in the code change notes) is called src/spiox_weighted.cpp
+// This is the cpp file where the matrix-free PCG core working functions live in.
+// so we can easily include this file in other Gaussian/non-Gaussian cpp files.
 
 // function for doing the matrix-free PCG that is generalized to quadratic likelihood distributions
 void SpIOX::general_BW_block(const arma::mat& omega, const arma::mat& Gscore,

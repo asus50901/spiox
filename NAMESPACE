@@ -13,4 +13,4 @@ export("spiox", "rgpiox", "autostart",
        "scaling_factor_at_zero", 
        "dag_vecchia_predict",
        "effective_sample_size",
-       "Correlationc")
+       "Correlationc", "spiox_nb")
