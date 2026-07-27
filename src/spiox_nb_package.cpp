@@ -139,10 +139,9 @@ Rcpp::List spiox_nb_latent_vi(const arma::mat& Y,
     
     // run a single VI iteration
     nb_model.nb_latent_vi(preconditioner);
+    double ll = nb_model.nb_latent_fit_eval();
     
     iter_done ++;
-    
-    double ll = nb_model.nb_latent_fit_eval();
     
     // monitoring convergence of the parameters
     arma::vec rel_change(5, arma::fill::zeros);
@@ -249,7 +248,7 @@ Rcpp::List spiox_nb_latent_vi(const arma::mat& Y,
     } // end of misalignment prediction for loop
     
   } else if(vi_pred_smp > 0 && !converged){
-    Rcpp::warning("VI reached max_iter before converging; predictive samples not collected.")
+    Rcpp::warning("VI reached max_iter before converging; predictive samples not collected.");
   }
   
   
