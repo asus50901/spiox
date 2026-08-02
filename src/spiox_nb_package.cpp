@@ -7,7 +7,6 @@
 
 using namespace Rcpp;
 
-// This is the src/spiox_nb_package.cpp file
 // Where we put the Rcpp export function that builds the NB model, run tierations, 
 // monitor convergence, predict, and return R list
 

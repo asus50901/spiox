@@ -7,7 +7,6 @@
 
 using namespace std;
 
-// This file (in the code change notes) is called src/spiox_weighted.cpp
 // This is the cpp file where the matrix-free PCG core working functions live in.
 // so we can easily include this file in other Gaussian/non-Gaussian cpp files.
 

@@ -5,7 +5,7 @@
 #include <cmath>
 #include <limits>
 
-// This is src/spiox_nb.cpp For the PolyaGamma expectation, NB vi iteration,
+// This file is for the PolyaGamma expectation, NB vi iteration,
 // Sigma update, likelihood calc, and making predictions
 // put some lower level functions that the NB model calculations here. 
 
@@ -69,17 +69,18 @@ void SpIOXNB::update_pg_expectation(){
 // Function to update Sigma
 void SpIOXNB::update_sigma_nbvi(){
   // same Sigma prior as Gaussian
-  const double df_post = static_cast<double>(core.n + core.q);
   Sigma_scale = arma::eye<arma::mat>(core.q, core.q) + VTV_ma; 
   Sigma_scale = arma::symmatu(Sigma_scale);
   
   arma::mat inv_scale = arma::inv_sympd(Sigma_scale);
    
   // E_q[Sigma] = Sigma_scale / (df_post - q - 1)
-  Sigma_mean = Sigma_scale / (df_post - static_cast<double>(core.q) - 1.0);
+  double df_post = core.n + core.q;
+  Sigma_mean = Sigma_scale / (df_post - core.q - 1.0);
   
   // E_q[Sigma^{-1}] = df_post * Sigma_scale^{-1} 
   Qbar = arma::symmatu(df_post * inv_scale);
+  //Qbar = arma::inv_sympd(Sigma_mean); 
   Qbar_sqrt = arma::chol(Qbar, "lower");
 }
 
@@ -92,7 +93,7 @@ void SpIOXNB::nb_latent_vi(SpIOX::PrecondChoice preconditioner){
   auto checkpoint = [&](const char* label){
     auto t_now = std::chrono::high_resolution_clock::now();
     double ms = std::chrono::duration<double, std::milli>(t_now - t_prev).count();
-    //Rcpp::Rcout << "[latent_vi] " << label << ": " << ms << " ms\n";
+    // Rcpp::Rcout << "[latent_vi] " << label << ": " << ms << " ms\n";
     t_prev = t_now;
   };
   
