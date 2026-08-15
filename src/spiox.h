@@ -500,6 +500,34 @@ public:
     
     B_Var = 1000 * arma::ones(arma::size(B));
     
+    // flat prior for cat variables
+    for(int j=0; j<p; j++){
+      bool have_zero = false;
+      bool have_one = false;
+      bool is_binary = true;
+      
+      // loop for detecting cat vars
+      for(int i = 0; i<n; i++){
+        if(X(i, j) == 0.0){
+          have_zero = true;
+        } else if(X(i, j) == 1.0){
+          have_one = true;
+        } else {
+          // break if there is anything other than 0s and 1s
+          is_binary = false;
+          break;
+        }
+      }
+      
+      bool is_dummy = is_binary && have_zero && have_one;
+      
+      // fill in infinity to get flat prior for cat variables
+      if(static_cast<int>(j) == intercept || is_dummy){
+        B_Var.row(j).fill(arma::datum::inf);
+      }
+      
+    }
+    
     theta = daggp_theta;
     daggps = std::vector<DagGP>(q);
 
