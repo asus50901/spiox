@@ -7,7 +7,7 @@ importFrom(Rcpp, evalCpp)
 importFrom(fields, "rdist")
 importFrom(FNN, "get.knnx")
 
-export("spiox", "rgpiox", "autostart",
+export("spiox", "rgpiox", "autostart", "NB_autostart",
        "spiox_predict", "spiox_predict_part",
        "spiox_latent_predict",
        "scaling_factor_at_zero", 
