@@ -84,6 +84,10 @@ iox_make_fij0 <- function(coords, custom_dag, dag_opts, theta, cov_model_matern,
     .Call(`_spiox_iox_make_fij0`, coords, custom_dag, dag_opts, theta, cov_model_matern, num_threads)
 }
 
+spiox_denoiseY <- function(X_new, coords_new, Y, X, coords, dag, B, theta, matern = 1L, num_threads = 1L, print_every = 100L) {
+    .Call(`_spiox_spiox_denoiseY`, X_new, coords_new, Y, X, coords, dag, B, theta, matern, num_threads, print_every)
+}
+
 spiox_nb_latent_vi <- function(Y, X, coords, offset, r, custom_dag, dag_opts, Theta, Sigma_start, Beta_start, W_start, matern = 1L, num_threads = 1L, print_every = 0L, tol = 1e-2, max_iter = 500L, vi_pred_smp = 0L, cg_preconditioner = 0L) {
     .Call(`_spiox_spiox_nb_latent_vi`, Y, X, coords, offset, r, custom_dag, dag_opts, Theta, Sigma_start, Beta_start, W_start, matern, num_threads, print_every, tol, max_iter, vi_pred_smp, cg_preconditioner)
 }
